@@ -1,0 +1,9 @@
+gitignore:
+# Default ignored files
+/shelf/
+/workspace.xml
+venv/
+.env
+templates/
+static/
+uploaded_files/

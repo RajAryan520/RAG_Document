@@ -1,0 +1,37 @@
+#FASTAPI
+fastapi == 0.115.6
+uvicorn[standard] == 0.32.1
+
+#Jinja2
+jinja2 == 3.1.4
+
+#python-multipart
+python-multipart == 0.0.19
+
+#sqlalchemy
+SQLALchemy == 2.0.36
+
+#psycopg2
+psycopg2 == 2.9.10
+
+#pydantic
+pydantic == 2.10.3
+
+#passlib[bcrypt]
+passlib[bcrypt] == 1.7.4
+
+#PyJWT
+PyJWT == 2.10.1
+
+#pypdf
+pypdf == 5.1.0
+
+
+#sentence-transformers
+sentence-transformers == 3.3.1
+
+#pymilvus
+pymilvus == 2.5.3
+
+#milvus-lite 
+milvus-lite == 2.4.11
