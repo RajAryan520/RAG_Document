@@ -8,7 +8,7 @@ from typing import Annotated
 from jwt_handler import get_current_user,CurrentUser
 from table import User
 import uuid
-from vector_db import insert_vector
+from vector_db import insert_vector,delete_vector,query_search
 
 app = FastAPI()
 
@@ -21,6 +21,9 @@ class User_IDReq(BaseModel):
 class New_User(BaseModel):
     Username: str
     Password: str
+
+class User_Query(BaseModel):
+    query_text: str
 
 
 @app.post("/UploadDoc",status_code=status.HTTP_201_CREATED)
@@ -35,13 +38,25 @@ async def Upload(Input_File: UploadFile,current_user: Annotated[CurrentUser,Depe
             if(Input_File.filename == None):
                 raise HTTPException(status_code=422,details=f"File name empty: {str(e)}")
             doc_uuid = uuid.uuid4()
+            
             insert_document(db,current_user.id,current_user.username,Input_File.filename,doc_uuid)
-            insert_vector(file_path,doc_uuid)
+            insert_vector(file_path,doc_uuid,current_user.id)
+            db.commit()
+            return {
+                "message": "File uploaded and processed successfully.",
+                "file_name": Input_File.filename,
+                "doc_uuid": str(doc_uuid),
+                "user_id": current_user.id
+           }
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(status_code=400,detail=f"Error occured, rolling back transaction :{str(e)}")
+
         finally:
             db.close()
     except IOError as e:
         raise HTTPException(status_code=500,details=f"File Error: {str(e)}")
-    return {"status: " "File Uploaded Successfully"}
+    
         
 @app.delete("/DeleteDoc",status_code=status.HTTP_200_OK)
 async def Delete_doc(request:UUIDRequest,current_user:Annotated[CurrentUser,Depends(get_current_user)]):
@@ -62,12 +77,38 @@ async def Delete_doc(request:UUIDRequest,current_user:Annotated[CurrentUser,Depe
                 detail="You are not authorized to delete this document"
             )
         delete_document(db,request.uuid)
-
+        delete_vector(request.uuid)
+        db.commit()
+        return {
+                "message": "File Deleted Successfully",
+                "file_name": document.doc_name,
+                "doc_uuid": str(request.uuid),
+                "user_id": current_user.id
+            }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400,detail=f"Error occured, rolling back transaction :{str(e)}")
     
     finally:
         db.close()
 
-    return {"status: " "File Deleted Successfully"}
+
+@app.get("/Query",status_code=status.HTTP_200_OK)
+def user_query(query:User_Query,current_user:Annotated[CurrentUser,Depends(get_current_user)]):
+
+    try:
+        query_text_list = query_search(query.query_text,current_user.id)
+        if len(query_text_list) == 0:
+            return {"Text":"Null"}
+        return [
+            {
+                f"Text {i}": chunk_text
+            }
+            for i,chunk_text in enumerate(query_text_list)
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=400,details=f"Error occured:{str(e)}")
+
 
 @app.get("/AllDoc", status_code=status.HTTP_200_OK)
 def user_docs(current_user:Annotated[CurrentUser,Depends(get_current_user)]):
@@ -89,7 +130,8 @@ def user_docs(current_user:Annotated[CurrentUser,Depends(get_current_user)]):
         }
         for doc in docs_list
     ]
-    
+
+
 @app.post("/NewUser", status_code=status.HTTP_201_CREATED)
 def register(request: New_User):
 
@@ -140,4 +182,8 @@ def login(request: New_User):
 # take user query , generate its embedding and store in the vector db ( or without storing we will fetch k-nearest vector) --done
 # take the fetched k-nearest vector, and query embedding to LLMs to address the query based on most accurate document 
 
-# implement rollback of both db postgres nd milvus if anyone fails
+# extract the chucnks of file and save the embedding with metadata as doc_id,text,user_id --done
+# implement rollback of both db postgres nd milvus if anyone fails --done
+
+
+# query search should work on the users doc only -- done

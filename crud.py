@@ -17,9 +17,9 @@ def insert_document(db: Session,user_id:str,username:str,doc_name: str,doc_uuid:
         new_user = User(uuid=doc_uuid,user_id=user_id,username=username,doc_name=doc_name,date_modified=CurrDate)
         
         db.add(new_user)
-        db.commit()
+        #db.commit()
     except SQLAlchemyError as e:
-        db.rollback()
+        #db.rollback()
         return {f"Error occurred while inserting the doc:{str(e)}"}
 
 def delete_document(db:Session, uuid: str):
@@ -28,14 +28,11 @@ def delete_document(db:Session, uuid: str):
         doc_to_delete = db.query(User).filter(User.uuid == uuid).first()
         
         if doc_to_delete:
-            # Document found, delete it
             db.delete(doc_to_delete)
-            db.commit()
-            return {"status": "File Deleted Successfully"}
         else:
             return {"status": "Document not found"}
     except SQLAlchemyError as e:
-        db.rollback() 
+        #db.rollback() 
         return {"error": f"Error occurred while deleting the document: {str(e)}"}
 
 def all_docs(db: Session, userid):
