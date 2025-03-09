@@ -4,7 +4,8 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 import uuid
 from fastapi import HTTPException
-from jwt_handler import get_current_user
+
+
 connections.connect(host="127.0.0.1", port="19530")
 
 fields = [
@@ -74,9 +75,3 @@ def query_search(query: str,user_id:int):
     except MilvusException as e:
         raise HTTPException(status_code=500, detail=f"Milvus Query Search Failed: {str(e)}")
 
-# file_path = r"C:\Users\RajAr\Desktop\rag_paper.pdf"
-#insert_vector(file_path,"qazwsx","1")
-#query_search("Application of fasting",8)
-#query_search("what are rules and regulation of 2024 batch",8)
-
-    

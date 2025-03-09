@@ -176,6 +176,7 @@ def login(request: New_User):
 # Option to upload txt file.  -done
 
 # the file uploaded by user will pass through the kafka queue
+
 # Extract the text from file through langchain -- done
 # Give the text to the model and generate the embedding --done
 # store the embedding in vector db --done

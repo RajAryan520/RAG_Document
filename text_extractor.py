@@ -24,9 +24,6 @@ def extract_text_from_file(file_path:str,chunk_size:int = 500,chunk_overlap:int 
      
     chunks_text =  text_splitter.split_text(text_content)
 
-    print("Type chunks:",type(chunks_text))
-    
-
     return chunks_text
 
 
@@ -36,7 +33,3 @@ def text_embedding(doc_text:list):
     for text in doc_text:
         embedding.append(model.encode(text))
     return embedding
-    
-# file_path = r"C:\Users\RajAr\Desktop\rag_paper.pdf"
-#extract_text_from_file(file_path)
-#text_embedding(file_path)

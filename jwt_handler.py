@@ -31,6 +31,7 @@ def create_access_token(data:Dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+
 def get_current_user(token: str=Depends(oauth2_scheme)):
     db = SessionLocal()
     try:

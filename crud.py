@@ -5,9 +5,6 @@ from sqlalchemy import insert
 from datetime import datetime
 from sqlalchemy.exc import SQLAlchemyError,IntegrityError
 from passlib.context import CryptContext
-from jwt_handler import create_access_token
-from text_extractor import text_embedding
-from sentence_transformers import SentenceTransformer
 import uuid
 pwd_context = CryptContext(schemes=["bcrypt"],deprecated="auto")
 
