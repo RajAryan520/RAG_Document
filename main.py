@@ -188,3 +188,6 @@ def login(request: New_User):
 
 
 # query search should work on the users doc only -- done
+
+
+# add message queue so adding document and its vector does not block the process.

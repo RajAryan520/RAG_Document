@@ -7,12 +7,13 @@ from typing import Dict,Optional
 from login import Login
 from database import SessionLocal
 from pydantic import BaseModel
+import os
 
 # OAuth2PasswordBearer helps Fastapi to extract token from the Authorization header
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="Login")
 
 # Secret Key 
-SECRET_KEY = "1d42034efc4afab03654a745d08a4cc56d66e2a8f7ef63a761b02f118d8a7afc"
+SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
