@@ -4,7 +4,6 @@
 
 This project is a secure document management and retrieval system that allows users to upload documents, generate embeddings for efficient search, and retrieve relevant document chunks using semantic search. It is built using FastAPI, PostgreSQL, SQLAlchemy, Milvus.
 
-Features
 
 
 
@@ -17,11 +16,11 @@ Features
 
 - **Document Upload**: Users can upload documents, which are stored securely with metadata.
 
-- **Document Chunking**: Large documents are automatically split into smaller text chunks.
+- **Document Chunking**:  Large documents are automatically split into smaller text chunks using langchain's **RecursiveCharacterTextSplitter** with chunk_size = 500 and chunk_overlap = 50.
 
-- **Vector Embeddings**: Chunks are converted into vector embeddings using Sentence Transformers.
+- **Vector Embeddings**: Chunks are converted into vector embeddings using Sentence Transformers Model **all-MiniLM-L6-v2**
 
-- **Vector Search**: Users can search for relevant document chunks using semantic search powered by Milvus.
+- **Vector Search**:  Users can search for relevant document chunks using semantic search powered by Milvus using **cosine** similarity
 
 
 
