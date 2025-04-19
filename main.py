@@ -1,16 +1,26 @@
 from datetime import datetime
 from fastapi import FastAPI, HTTPException, Request , UploadFile , status , Depends
 from database import SessionLocal
-from crud import insert_document,delete_document,all_docs,create_user,user_login,create_access_token
+from crud import insert_document,delete_document,all_docs,create_user,user_login
 from pydantic import BaseModel
 from login import Login
 from typing import Annotated
-from jwt_handler import get_current_user,CurrentUser
+from jwt_handler import get_current_user,CurrentUser,create_access_token
 from table import User
 import uuid
+import json
 from vector_db import insert_vector,delete_vector,query_search
+from contextlib import asynccontextmanager
+from kafka_producer import init_kafka_producer,close_kafka_producer,producer
+from redis_client import redis_client
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app : FastAPI):
+    await init_kafka_producer()
+    yield
+    await close_kafka_producer()
+
+app = FastAPI(lifespan=lifespan)
 
 class UUIDRequest(BaseModel):
     uuid: str
@@ -25,6 +35,9 @@ class New_User(BaseModel):
 class User_Query(BaseModel):
     query_text: str
 
+class Document_Search(BaseModel):
+    doc_search = str
+
 
 @app.post("/UploadDoc",status_code=status.HTTP_201_CREATED)
 async def Upload(Input_File: UploadFile,current_user: Annotated[CurrentUser,Depends(get_current_user)]):
@@ -36,18 +49,39 @@ async def Upload(Input_File: UploadFile,current_user: Annotated[CurrentUser,Depe
         db = SessionLocal()
         try:
             if(Input_File.filename == None):
-                raise HTTPException(status_code=422,details=f"File name empty: {str(e)}")
+                raise HTTPException(status_code=422,detail=f"File name empty: {str(e)}")
             doc_uuid = uuid.uuid4()
             
             insert_document(db,current_user.id,current_user.username,Input_File.filename,doc_uuid)
             insert_vector(file_path,doc_uuid,current_user.id)
+
+            current_date = datetime.now().strftime('%Y-%m-%d')
+
+            events = {
+                "event_type"  : "upload",
+                "user_id"     : current_user.id,
+                "filename"    : f"{Input_File.filename}",
+                "doc_id"      : doc_uuid,
+                "timestamp"   : current_date,
+                "path"        : file_path,
+            }
+            
+            try:
+                await producer.send_and_wait("file_events",json.dumps(events).encode())
+
+            except Exception as kafka_error:
+                db.rollback()
+                raise HTTPException(status_code=500,detail=f"Kafka event publish failed, rolling back database transaction :{str(kafka_error)}")
+            
             db.commit()
+
             return {
                 "message": "File uploaded and processed successfully.",
-                "file_name": Input_File.filename,
+                "user_id": current_user.id,
                 "doc_uuid": str(doc_uuid),
-                "user_id": current_user.id
+                "file_name": Input_File.filename,
            }
+        
         except Exception as e:
             db.rollback()
             raise HTTPException(status_code=400,detail=f"Error occured, rolling back transaction :{str(e)}")
@@ -55,7 +89,7 @@ async def Upload(Input_File: UploadFile,current_user: Annotated[CurrentUser,Depe
         finally:
             db.close()
     except IOError as e:
-        raise HTTPException(status_code=500,details=f"File Error: {str(e)}")
+        raise HTTPException(status_code=500,detail=f"File Error: {str(e)}")
     
         
 @app.delete("/DeleteDoc",status_code=status.HTTP_200_OK)
@@ -76,8 +110,23 @@ async def Delete_doc(request:UUIDRequest,current_user:Annotated[CurrentUser,Depe
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You are not authorized to delete this document"
             )
+        
         delete_document(db,request.uuid)
         delete_vector(request.uuid)
+
+        events = {
+                "event_type"  : "delete",
+                "user_id"     : current_user.id,
+                "doc_uuid"    : str(request.uuid),
+                "filename"    : document.doc_name,
+            }
+        
+        try:
+            await producer.send_and_wait("file.events",json.dumps(events).encode())
+        except Exception as kafka_error:
+            db.rollback()
+            raise HTTPException(status_code=500,detail=f"Kafka event publish failed, rolling back database transaction :{str(kafka_error)}")
+
         db.commit()
         return {
                 "message": "File Deleted Successfully",
@@ -88,7 +137,7 @@ async def Delete_doc(request:UUIDRequest,current_user:Annotated[CurrentUser,Depe
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400,detail=f"Error occured, rolling back transaction :{str(e)}")
-    
+
     finally:
         db.close()
 
@@ -166,6 +215,31 @@ def login(request: New_User):
     finally:
         db.close()
 
+
+@app.get("/DocumentSearch",status_code=status.HTTP_200_OK)
+async def search_documents(doc_name:Document_Search,current_user:Annotated[CurrentUser,Depends(get_current_user)]):
+    
+    cached_key = f"search_cache:{current_user.id}:{doc_name}"
+
+    cached_result = await redis_client.get(cached_key)
+
+    if cached_result:
+        return json.loads(cached_result)
+    
+    else:
+        # search from ES
+        # if result valid then return the result and append to redis cache
+
+        pass
+          
+    
+
+    
+
+
+
+
+
 # Login and generate a token -done
 # get_current_user -done
 # all endpoint needs a token will display info related to current_user -done
@@ -191,3 +265,10 @@ def login(request: New_User):
 
 
 # add message queue so adding document and its vector does not block the process.
+
+
+
+
+
+
+        
