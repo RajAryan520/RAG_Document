@@ -1,16 +1,18 @@
 from elasticsearch import AsyncElasticsearch
 from aiokafka import AIOKafkaConsumer
 import json
-
+import asyncio
 es = AsyncElasticsearch("http://localhost:9200")
 
-async def check_es_connection():
-    if await es.ping():
-        print("Connected to Elasticsearch")
-    else:
-        print("Failed to connect to Elasticsearch")
+# async def check_es_connection():
+#     try:
+#         if await es.ping():
+#             print("Connected to Elasticsearch")
+#             await es.close()
+#     except Exception as e:
+#             print("Failed to connect to Elasticsearch",e)
 
-
+# asyncio.run(check_es_connection())
 
 async def handle_event(event: dict):
     if event["event_type"] == "upload":

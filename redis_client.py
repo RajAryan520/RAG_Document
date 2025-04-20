@@ -2,9 +2,18 @@ import redis.asyncio as redis
 from fastapi import APIRouter
 from aiokafka import AIOKafkaConsumer
 import json
+import asyncio
 
 redis_client = redis.Redis(host="localhost", port=6379, decode_responses=True)
 
+# async def check_redis():
+#     try:
+#         pong = await redis_client.ping()
+#         print("✅ Redis connected:", pong)
+#     except Exception as e:
+#         print("❌ Redis connection failed:", e)
+
+# asyncio.run(check_redis())
 
 async def handle_event(event:dict):
     if event["event_type"] == "upload":

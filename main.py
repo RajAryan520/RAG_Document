@@ -13,6 +13,7 @@ from vector_db import insert_vector,delete_vector,query_search
 from contextlib import asynccontextmanager
 from kafka_producer import init_kafka_producer,close_kafka_producer,producer
 from redis_client import redis_client
+from es_consumer import es
 
 @asynccontextmanager
 async def lifespan(app : FastAPI):
@@ -36,7 +37,7 @@ class User_Query(BaseModel):
     query_text: str
 
 class Document_Search(BaseModel):
-    doc_search = str
+    doc_search : str
 
 
 @app.post("/UploadDoc",status_code=status.HTTP_201_CREATED)
@@ -219,7 +220,9 @@ def login(request: New_User):
 @app.get("/DocumentSearch",status_code=status.HTTP_200_OK)
 async def search_documents(doc_name:Document_Search,current_user:Annotated[CurrentUser,Depends(get_current_user)]):
     
-    cached_key = f"search_cache:{current_user.id}:{doc_name}"
+    query_text = doc_name.doc_search.lower
+
+    cached_key = f"search_cache:{current_user.id}:{query_text}"
 
     cached_result = await redis_client.get(cached_key)
 
@@ -229,8 +232,33 @@ async def search_documents(doc_name:Document_Search,current_user:Annotated[Curre
     else:
         # search from ES
         # if result valid then return the result and append to redis cache
+        response = es.search(
+            index='documents',
+            query = {
+                "bool":{
+                    "must":[
+                        {
+                            "match_phrase_prefix":{
+                                "filename":query_text
+                            }
+                        },
+                        {
+                            "match":{
+                                "user_id":current_user.id
+                            }
+                        }
+                    ]
+                }
+            },
+            size=10
+        )
+        
+        results = [hit["_source"]["filename"] for hit in response["hits"]["hits"]]
 
-        pass
+        if results:
+            await redis_client.set(cached_key, json.dumps(results), ex=300)
+
+        return {"matches":results}
           
     
 
