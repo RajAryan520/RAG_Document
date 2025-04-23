@@ -1,5 +1,6 @@
 from aiokafka import AIOKafkaProducer
 import asyncio
+from logger import logger
 producer = None
 
 async def init_kafka_producer():
@@ -12,6 +13,9 @@ async def close_kafka_producer():
     if producer:
         await producer.stop()
 
+def get_producer():
+    logger.debug(f"Kafka Producer accessed: {producer}")
+    return producer
 
 # async def check_kafka():
 #     try:

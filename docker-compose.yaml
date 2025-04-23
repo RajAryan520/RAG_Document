@@ -14,15 +14,15 @@ services:
       - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
       - ALLOW_PLAINTEXT_LISTENER=yes
 
-  redis:
-    image: redis:latest
-    ports:
-      - "6379:6379"
+  # redis:
+  #   image: redis:latest
+  #   ports:
+  #     - "6379:6379"
 
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.5.1
-    ports:
-      - "9200:9200"
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
+  # elasticsearch:
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:8.5.1
+  #   ports:
+  #     - "9200:9200"
+  #   environment:
+  #     - discovery.type=single-node
+  #     - xpack.security.enabled=false

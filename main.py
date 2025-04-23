@@ -11,9 +11,10 @@ import uuid
 import json
 from vector_db import insert_vector,delete_vector,query_search
 from contextlib import asynccontextmanager
-from kafka_producer import init_kafka_producer,close_kafka_producer,producer
+from kafka_producer import init_kafka_producer,close_kafka_producer,get_producer
 from redis_client import redis_client
 from es_consumer import es
+from logger import logger
 
 @asynccontextmanager
 async def lifespan(app : FastAPI):
@@ -43,6 +44,9 @@ class Document_Search(BaseModel):
 @app.post("/UploadDoc",status_code=status.HTTP_201_CREATED)
 async def Upload(Input_File: UploadFile,current_user: Annotated[CurrentUser,Depends(get_current_user)]):
 
+    producer = get_producer()
+    logger.debug(f"Producer_UPLOAD_ENDPOINT:{producer}")
+
     try:
         with open(f"uploaded_files/{Input_File.filename}", "wb") as f:
             f.write(await Input_File.read())
@@ -62,7 +66,7 @@ async def Upload(Input_File: UploadFile,current_user: Annotated[CurrentUser,Depe
                 "event_type"  : "upload",
                 "user_id"     : current_user.id,
                 "filename"    : f"{Input_File.filename}",
-                "doc_id"      : doc_uuid,
+                "doc_id"      : str(doc_uuid),
                 "timestamp"   : current_date,
                 "path"        : file_path,
             }
@@ -96,6 +100,9 @@ async def Upload(Input_File: UploadFile,current_user: Annotated[CurrentUser,Depe
 @app.delete("/DeleteDoc",status_code=status.HTTP_200_OK)
 async def Delete_doc(request:UUIDRequest,current_user:Annotated[CurrentUser,Depends(get_current_user)]):
 
+    producer = get_producer()
+    logger.debug(f"Producer_DELETE_ENDPOINT:{producer}")
+
     db = SessionLocal()
 
     try:
@@ -123,7 +130,8 @@ async def Delete_doc(request:UUIDRequest,current_user:Annotated[CurrentUser,Depe
             }
         
         try:
-            await producer.send_and_wait("file.events",json.dumps(events).encode())
+            await producer.send_and_wait("file_events",json.dumps(events).encode())
+
         except Exception as kafka_error:
             db.rollback()
             raise HTTPException(status_code=500,detail=f"Kafka event publish failed, rolling back database transaction :{str(kafka_error)}")
