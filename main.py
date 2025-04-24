@@ -225,10 +225,10 @@ def login(request: New_User):
         db.close()
 
 
-@app.get("/DocumentSearch",status_code=status.HTTP_200_OK)
+@app.post("/DocumentSearch",status_code=status.HTTP_200_OK)
 async def search_documents(doc_name:Document_Search,current_user:Annotated[CurrentUser,Depends(get_current_user)]):
     
-    query_text = doc_name.doc_search.lower
+    query_text = doc_name.doc_search.lower()
 
     cached_key = f"search_cache:{current_user.id}:{query_text}"
 
@@ -240,7 +240,7 @@ async def search_documents(doc_name:Document_Search,current_user:Annotated[Curre
     else:
         # search from ES
         # if result valid then return the result and append to redis cache
-        response = es.search(
+        response = await es.search(
             index='documents',
             query = {
                 "bool":{
